@@ -1,0 +1,10 @@
+set term png size 1280,768
+set output "noise.png"
+set xlabel "hours"
+set ylabel "force"
+set yrange [8530000:8630000]
+set xtics font "Arial,10"
+set ytics font "Arial,10"
+set key font "Arial,12"
+plot "/home/ted/lc-noise/noise-ln.txt" using 1:2 title "soaked dish rag" with lines
+set term x11
