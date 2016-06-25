@@ -1,8 +1,18 @@
 import RPi.GPIO as GPIO
-import time
+from time import time, sleep
 import sys
 import numpy  # sudo apt-get python-numpy
+import smbus
 
+bus = smbus.SMBus(1)
+
+DEVICE_ADDRESS = 0x27
+MAX_VALUE = pow(2,14) - 1.0
+
+def trusty_sleep(n):
+    start = time()
+    while (time() - start < n):
+        sleep(n - (time() - start))
 
 def createBoolList(size=8):
     ret = []
@@ -38,7 +48,7 @@ class HX711:
 
         self.set_gain(gain)
 
-        time.sleep(1)
+        trusty_sleep(1)
 
     def is_ready(self):
         return GPIO.input(self.DOUT) == 0
@@ -130,27 +140,53 @@ class HX711:
     def power_down(self):
         GPIO.output(self.PD_SCK, False)
         GPIO.output(self.PD_SCK, True)
-        time.sleep(0.0001)
+        trusty_sleep(0.0001)
 
     def power_up(self):
         GPIO.output(self.PD_SCK, False)
-        time.sleep(0.0001)
+        #trusty_sleep(0.0001)
 
 ############# EXAMPLE
-hx = HX711(5, 6)
-hx.set_scale(1000)
-hx.set_one_kilo(92)
-hx.power_down()
-hx.power_up()
-hx.tare()
+hx1 = HX711(23, 24)
+hx2 = HX711(20, 21)
+hx1.power_down()
+hx1.power_up()
+hx2.power_down()
+hx2.power_up()
+
+if len(sys.argv) > 1:
+	filename = sys.argv[1]
+else:
+	filename = None
 
 while True:
     try:
-        val = hx.get_weight(5)
-        print val
+	#buffer = bus.read_i2c_block_data(DEVICE_ADDRESS, 0, 4);
 
-        hx.power_down()
-        hx.power_up()
-        time.sleep(0.5)
+	#status = buffer[0] >> 6 & 0x03
+	#rh = round(((buffer[0] & 0x3f) << 8 | buffer[1]) * 100.0 / MAX_VALUE, 2)
+	#t = round((float((buffer[2] << 6) + (buffer[3] >> 2)) / MAX_VALUE) * 165.0 - 40, 2)
+
+	val1 = hx1.read()
+	val2 = hx2.read()
+
+	#output = "%.1f\t%.1f\t%d\t%d\n" % (t, rh, val1, val2)
+	output = "%d\t%d\n" % (val1, val2)
+	if (filename is None):
+		print output
+	else:
+		f = open(filename, 'a')
+		f.write(output)
+		f.close()
+	#print((float(val)*.00050233))
+
+        hx1.power_down()
+	hx2.power_down()
+	if (filename is None):
+		trusty_sleep(1)
+	else:
+		trusty_sleep(60)
+	hx1.power_up()
+	hx2.power_up()
     except (KeyboardInterrupt, SystemExit):
         cleanAndExit()
